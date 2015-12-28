@@ -151,7 +151,7 @@ void updateNodePositionOnBucket(LinkedHashMap* linkedHashMap, LinkedList* bucket
 
 void updateOldestAndNewestNodePointer(LinkedHashMap* linkedHashMap, Node* currentNode) 
 {
-	if (linkedHashMap->oldest == NULL && linkedHashMap->newest == NULL) 
+	if (linkedHashMap->oldest == NULL) 
 	{
 		linkedHashMap->oldest = currentNode;
 		linkedHashMap->newest = currentNode;

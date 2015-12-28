@@ -2,9 +2,10 @@
 #include "linkedhashmap.h"
 #include "CUnitForAndo/include/testRunner.h"
 
-unsigned int testPutNewItemOnEmptyMap(void) 
+// This method is guaranteed to work with the hash function h(x, m) = x*(x + 2) % m
+unsigned int testPutNewItemOnEmptyMap_ShouldBecomeHeadAndTailAndOldestAndNewest(void) 
 {
-	int key = 5;
+	int key = 0;
 	LinkedHashMap* linkedHashMap = createLinkedHashMap(20, 0.5);
 
 	put(linkedHashMap, key, 5.0);
@@ -12,14 +13,20 @@ unsigned int testPutNewItemOnEmptyMap(void)
 	Element* element = get(linkedHashMap, key);
 	TEST_ASSERT(NULL != element);
 	TEST_ASSERT_EQUALS(element->key, key);
+	TEST_ASSERT(linkedHashMap->oldest->element == element);
+	TEST_ASSERT(linkedHashMap->newest->element == element);
+	// Index calculated using a h(x, m) = x*(x + 2) % m hash function
+	TEST_ASSERT(linkedHashMap->linkedList[0].head->element == element);
+	TEST_ASSERT(linkedHashMap->linkedList[0].tail->element == element);
 
 	return 0;
 }
 
-unsigned int testPutTwoItensOnMap(void) 
+// This method is guaranteed to work with the hash function h(x, m) = x*(x + 2) % m
+unsigned int testPutTwoItensOnMap_SecondItemShouldBecomeTailAndNewestAndFirstShouldBecomeHeadAndOldest(void) 
 {
-	int firstKey = 5;
-	int secondKey = 8;
+	int firstKey = 0;
+	int secondKey = 40;
 	LinkedHashMap* linkedHashMap = createLinkedHashMap(20, 0.5);
 
 	put(linkedHashMap, firstKey, 8.0);
@@ -28,10 +35,20 @@ unsigned int testPutTwoItensOnMap(void)
 	Element* element = get(linkedHashMap, firstKey);
 	TEST_ASSERT(NULL != element);
 	TEST_ASSERT_EQUALS(element->key, firstKey);
+	TEST_ASSERT(linkedHashMap->oldest->element == element);
+	TEST_ASSERT(linkedHashMap->newest->element != element);
+	// Index calculated using a h(x, m) = x*(x + 2) % m hash function
+	TEST_ASSERT(linkedHashMap->linkedList[0].head->element == element);
+	TEST_ASSERT(linkedHashMap->linkedList[0].tail->element != element);
 
 	element = get(linkedHashMap, secondKey);
 	TEST_ASSERT(NULL != element);
 	TEST_ASSERT_EQUALS(element->key, secondKey);
+	TEST_ASSERT(linkedHashMap->newest->element == element);
+	TEST_ASSERT(linkedHashMap->oldest->element != element);
+	// Index calculated using a h(x, m) = x*(x + 2) % m hash function
+	TEST_ASSERT(linkedHashMap->linkedList[0].tail->element == element);
+	TEST_ASSERT(linkedHashMap->linkedList[0].head->element != element);
 
 	return 0;
 }
@@ -274,13 +291,80 @@ unsigned int testDeleteTailOfBucketWithConflits_ShouldReturnNullAndTailShouldCha
 	return 0;
 }
 
-// delete head do bucket
-// delete item that does not exist on bucket with conflict
+// This method is guaranteed to work with the hash function h(x, m) = x*(x + 2) % m
+unsigned int testDeleteHeadOfBucketWithConflits_ShouldReturnNullAndHeadShouldChange(void) 
+{
+	int firstKey = 2; // Hash: 0
+	int secondKey = 4; // Hash: 0
+	int thirdKey = 8; // Hash: 0
+	int fourthKey = 16; // Hash: 0
+	LinkedHashMap* linkedHashMap = createLinkedHashMap(1, 0.5);
+
+	put(linkedHashMap, firstKey, 5.0);
+	put(linkedHashMap, secondKey, 5.0);
+	put(linkedHashMap, thirdKey, 5.0);
+	put(linkedHashMap, fourthKey, 5.0);
+
+	delete(linkedHashMap, firstKey);
+
+	Element* element = get(linkedHashMap, firstKey);
+	TEST_ASSERT(NULL == element);
+
+	element = get(linkedHashMap, linkedHashMap->linkedList->head->element->key);
+	TEST_ASSERT(NULL != element);
+	TEST_ASSERT_EQUALS(element->key, secondKey);
+
+	return 0;
+}
+
+// This method is guaranteed to work with the hash function h(x, m) = x*(x + 2) % m
+unsigned int testDeleteNonInsertedItemOnBucketWithConflits_ShouldDoNothing(void) 
+{
+	int firstKey = 2; // Hash: 0
+	int secondKey = 4; // Hash: 0
+	int thirdKey = 8; // Hash: 0
+	int fourthKey = 16; // Hash: 0
+	LinkedHashMap* linkedHashMap = createLinkedHashMap(1, 0.5);
+
+	put(linkedHashMap, firstKey, 5.0);
+	put(linkedHashMap, secondKey, 5.0);
+	put(linkedHashMap, thirdKey, 5.0);
+	put(linkedHashMap, fourthKey, 5.0);
+
+	delete(linkedHashMap, 32);
+
+	Element* element = get(linkedHashMap, firstKey);
+	TEST_ASSERT(NULL != element);
+
+	element = get(linkedHashMap, secondKey);
+	TEST_ASSERT(NULL != element);
+
+	element = get(linkedHashMap, thirdKey);
+	TEST_ASSERT(NULL != element);
+
+	element = get(linkedHashMap, fourthKey);
+	TEST_ASSERT(NULL != element);
+
+	return 0;
+}
+
+// This method is guaranteed to work with the hash function h(x, m) = x*(x + 2) % m
+unsigned int testDeleteNonInsertedItemOnHash_ShouldDoNothing(void) 
+{
+	LinkedHashMap* linkedHashMap = createLinkedHashMap(1, 0.5);
+
+	delete(linkedHashMap, 1);
+
+	TEST_ASSERT(NULL == linkedHashMap->oldest);
+	TEST_ASSERT(NULL == linkedHashMap->newest);
+
+	return 0;
+}
 
 unsigned int testManyFunction(void) {
 
-    TEST_ASSERT(!testPutNewItemOnEmptyMap()); 
-    TEST_ASSERT(!testPutTwoItensOnMap());
+    TEST_ASSERT(!testPutNewItemOnEmptyMap_ShouldBecomeHeadAndTailAndOldestAndNewest()); 
+    TEST_ASSERT(!testPutTwoItensOnMap_SecondItemShouldBecomeTailAndNewestAndFirstShouldBecomeHeadAndOldest());
     TEST_ASSERT(!testGetItemThatDoesNotExist_ShouldReturnNull());
     TEST_ASSERT(!testDeleteItem_ShouldReturnNull());
     TEST_ASSERT(!testOverflowHashCapacity_ShouldRemoveOldestItem());
@@ -292,6 +376,9 @@ unsigned int testManyFunction(void) {
     TEST_ASSERT(!testGetNonInsertedItemOnCrowdedBucket_ShouldReturnNull());
     TEST_ASSERT(!testDeleteItemOnBucketWithConflits_ShouldReturnNull());
     TEST_ASSERT(!testDeleteTailOfBucketWithConflits_ShouldReturnNullAndTailShouldChange());
+    TEST_ASSERT(!testDeleteHeadOfBucketWithConflits_ShouldReturnNullAndHeadShouldChange());
+    TEST_ASSERT(!testDeleteNonInsertedItemOnBucketWithConflits_ShouldDoNothing());
+    TEST_ASSERT(!testDeleteNonInsertedItemOnHash_ShouldDoNothing());
 
     return 0;
 }
