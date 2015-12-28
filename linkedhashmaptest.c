@@ -274,9 +274,8 @@ unsigned int testDeleteTailOfBucketWithConflits_ShouldReturnNullAndTailShouldCha
 	return 0;
 }
 
-//delete head do bucket
-/// delete tail do bucket
-// delete item that does not exist
+// delete head do bucket
+// delete item that does not exist on bucket with conflict
 
 unsigned int testManyFunction(void) {
 

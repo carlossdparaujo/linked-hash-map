@@ -29,32 +29,11 @@ int hash(int key, int hashSize)
 	return (hashedValue) % hashSize;
 }
 
-void removeOldestNode(LinkedHashMap* linkedHashMap) 
+Node* findNode(LinkedList* bucket, int key)
 {
-	Node* oldest = linkedHashMap->oldest;
-	linkedHashMap->oldest = oldest->next;
-	linkedHashMap->oldest->previous = NULL;
-
-	oldest = NULL;
-}
-
-void removeNewestNode(LinkedHashMap* linkedHashMap) 
-{
-	Node* newest = linkedHashMap->newest;
-	linkedHashMap->newest = newest->previous;
-	linkedHashMap->newest->next = NULL;
-
-	newest = NULL;
-}
-
-void delete(LinkedHashMap* linkedHashMap, int key) 
-{
-	int index = hash(key, linkedHashMap->hashSize);
-	LinkedList* bucket = &linkedHashMap->linkedList[index];
-
 	if (bucket->head == NULL) 
 	{
-		return;
+		return NULL;
 	}
 
 	Node* currentNode = bucket->head;
@@ -64,10 +43,15 @@ void delete(LinkedHashMap* linkedHashMap, int key)
 
 		if (currentNode == NULL) 
 		{
-			return;
+			return NULL;
 		}
 	}
 
+	return currentNode;
+}
+
+void removeNodeFromBucket(LinkedList* bucket, Node* currentNode)
+{
 	if (currentNode == bucket->tail && currentNode == bucket->head) 
 	{
 		bucket->head = NULL;
@@ -88,7 +72,10 @@ void delete(LinkedHashMap* linkedHashMap, int key)
 		currentNode->previousOnBucket->nextOnBucket = currentNode->nextOnBucket;
 		currentNode->nextOnBucket->previousOnBucket = currentNode->previousOnBucket;
 	}
+}
 
+void removeNodeFromHashCache(LinkedHashMap* linkedHashMap, Node* currentNode)
+{
 	if (currentNode == linkedHashMap->oldest && currentNode == linkedHashMap->newest) 
 	{
 		linkedHashMap->oldest = NULL;
@@ -96,20 +83,70 @@ void delete(LinkedHashMap* linkedHashMap, int key)
 	} 
 	else if (currentNode == linkedHashMap->oldest) 
 	{
-		removeOldestNode(linkedHashMap);
+		linkedHashMap->oldest = linkedHashMap->oldest->next;
+		linkedHashMap->oldest->previous = NULL;
 	} 
 	else if (currentNode == linkedHashMap->newest)
 	{
-		removeNewestNode(linkedHashMap);
+		linkedHashMap->newest = linkedHashMap->newest->previous;
+		linkedHashMap->newest->next = NULL;
 	} 
 	else 
 	{
 		currentNode->previous->next = currentNode->next;
 		currentNode->next->previous = currentNode->previous;
 	}
+}
+
+void delete(LinkedHashMap* linkedHashMap, int key) 
+{
+	int index = hash(key, linkedHashMap->hashSize);
+	LinkedList* bucket = &linkedHashMap->linkedList[index];
+
+	Node* currentNode = findNode(bucket, key);
+
+	if (currentNode == NULL)
+	{
+		return;
+	}
+
+	removeNodeFromBucket(bucket, currentNode);
+	removeNodeFromHashCache(linkedHashMap, currentNode);
 
 	free(currentNode);
 	currentNode = NULL;
+}
+
+Node* createNode(int key, float value)
+{
+	Node* node = (Node*) malloc(sizeof(Node));
+	node->previous = NULL;
+	node->next = NULL;
+	node->nextOnBucket = NULL;
+	node->previousOnBucket = NULL;
+
+	node->element = (Element*) malloc(sizeof(Element));
+	node->element->key = key;
+	node->element->value = value;
+
+	return node;
+}
+
+void updateNodePositionOnBucket(LinkedHashMap* linkedHashMap, LinkedList* bucket, Node* currentNode) 
+{
+	if (bucket->head == NULL) 
+	{
+		bucket->head = currentNode;
+		bucket->tail = currentNode;
+
+		linkedHashMap->currentCapacity++;
+	}
+	else 
+	{
+		currentNode->previousOnBucket = bucket->tail;
+		bucket->tail->nextOnBucket = currentNode;
+		bucket->tail = currentNode;
+	}
 }
 
 void updateOldestAndNewestNodePointer(LinkedHashMap* linkedHashMap, Node* currentNode) 
@@ -133,30 +170,9 @@ void put(LinkedHashMap* linkedHashMap, int key, float value)
 	int index = hash(key, linkedHashMap->hashSize);
 	LinkedList* bucket = &linkedHashMap->linkedList[index];
 
-	Node* currentNode = (Node*) malloc(sizeof(Node));
-	currentNode->previous = NULL;
-	currentNode->next = NULL;
-	currentNode->nextOnBucket = NULL;
-	currentNode->previousOnBucket = NULL;
+	Node* currentNode = createNode(key, value);
 
-	currentNode->element = (Element*) malloc(sizeof(Element));
-	currentNode->element->key = key;
-	currentNode->element->value = value;
-
-	if (bucket->head == NULL) 
-	{
-		bucket->head = currentNode;
-		bucket->tail = currentNode;
-
-		linkedHashMap->currentCapacity++;
-	}
-	else 
-	{
-		currentNode->previousOnBucket = bucket->tail;
-		bucket->tail->nextOnBucket = currentNode;
-		bucket->tail = currentNode;
-	}
-
+	updateNodePositionOnBucket(linkedHashMap, bucket, currentNode);
 	updateOldestAndNewestNodePointer(linkedHashMap, currentNode);
 
 	if (linkedHashMap->currentCapacity > linkedHashMap->capacity) 
@@ -170,20 +186,12 @@ Element* get(LinkedHashMap* linkedHashMap, int key)
 	int index = hash(key, linkedHashMap->hashSize);
 	LinkedList* bucket = &linkedHashMap->linkedList[index];
 
-	if (bucket->head == NULL) {
+	Node* currentNode = findNode(bucket, key);
+
+	if (currentNode == NULL)
+	{
 		return NULL;
 	}
 
-	Node* node = bucket->head;
-	while (node->element->key != key)
-	{
-		node = node->nextOnBucket;
-
-		if (node == NULL) 
-		{
-			return NULL;
-		}
-	}
-
-	return node->element;
+	return currentNode->element;
 }
