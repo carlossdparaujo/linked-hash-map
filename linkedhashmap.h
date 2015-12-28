@@ -1,8 +1,7 @@
 typedef struct _Element 
 {
-	long hash;
-	int value;
-} Element; 
+	float value;	
+} Element;
 
 typedef struct _Node 
 {
@@ -13,6 +12,9 @@ typedef struct _Node
 typedef struct _LinkedHashMap 
 {
 	Node* hash;
+	int hashSize;
 } LinkedHashMap;
 
-LinkedHashMap createLinkedHashMap(void);
+LinkedHashMap* createLinkedHashMap(int hashSize);
+void put(LinkedHashMap* linkedHashMap, float value);
+Element* get(LinkedHashMap* linkedHashMap, float value);
